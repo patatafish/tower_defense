@@ -23,7 +23,7 @@ def load_image(name, colorkey=None, scale=1):
     fullname = os.path.join(texture_dir, name)
     image = pg.image.load(fullname)
 
-    image = image.convert()
+    image = image.convert_alpha()
 
     size = image.get_size()
     size = (size[0] * scale, size[1] * scale)
@@ -56,29 +56,34 @@ class Pointer(pg.sprite.Sprite):
 
     def __init__(self):
         pg.sprite.Sprite.__init__(self)     # call sprite init
-        self.image, self.rect = load_image("pointer.png")
-        self.pointer_offset = (0, 0)
+        self.image, self.rect = load_image("pointer.png", -1, .1)
         self.click = False
+        pg.event.set_grab(True)
 
     def update(self):
         """Move the mouse pointer"""
         pos = pg.mouse.get_pos()
+        # reset pos tuple to keep mouse pointer in window
+        if pos[0] > 1599:
+            pos = (1599, pos[1])
+            #pg.mouse.set_pos(pos)
+        elif pos[0] < 1:
+            pos = (1, pos[1])
+            #pg.mouse.set_pos(pos)
+        if pos[1] > 899:
+            pos = (pos[0], 899)
+            #pg.mouse.set_pos(pos)
+        elif pos[1] < 1:
+            pos = (pos[0], 1)
+            #pg.mouse.set_pos(pos)
+        if pg.mouse.get_pos() != pos:
+            pg.mouse.set_pos(pos)
         self.rect.topleft = pos
-        self.rect.move_ip(self.pointer_offset)
+        # print(pos, pg.mouse.get_pos())
         if self.click:
             # DO NOTHING RIGHT NOW FOR CLICK
+            print("mouse click")
             None
-
-    def punch(self, target):
-        """returns the object that is clicked if anything is under mouse"""
-        if not self.click:
-            self.click = True
-            hitbox = self.rect.inflate(-5, -5)
-            return hitbox.colliderect(target.rect)
-
-    def unpunch(self):
-        """unknown"""
-        self.click = False
 
 
 
@@ -87,6 +92,11 @@ class Pointer(pg.sprite.Sprite):
 def GameLoop():
 
     running = True
+
+    # loading screen
+    fill_image = pg.image.load("data/textures/loading_screen.png")
+    background.blit(fill_image, (0, 0))
+
 
     while running:
         clock.tick(60)
@@ -101,7 +111,7 @@ def GameLoop():
 
         screen.blit(background, (0, 0))
         allsprites.draw(screen)
-        pygame.display.flip()
+        pg.display.flip()
 
     pg.quit()
 
@@ -111,12 +121,13 @@ if __name__ == '__main__':
 
     pg.init()
 
-    SCREEN_WIDTH = 800
-    SCREEN_HEIGHT = 600
+    SCREEN_WIDTH = 1600
+    SCREEN_HEIGHT = 900
 
     screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pg.display.set_caption("Tower Def")
     pg.mouse.set_visible(False)
+    pg.mouse.set_cursor()
 
     background = pg.Surface(screen.get_size())
     background = background.convert()
@@ -125,11 +136,9 @@ if __name__ == '__main__':
     screen.blit(background, (0, 0))
     pygame.display.flip()
 
-    spawn_sound = load_sound("short_roar.wav")
-
     pointer = Pointer()
 
-    allsprites = pg.sprite.RenderPlain(pointer)
+    allsprites = pg.sprite.RenderPlain((pointer))
 
     clock = pg.time.Clock()
 
