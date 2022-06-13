@@ -13,79 +13,57 @@ if not pg.mixer:
 
 # GLOBAL LOADS AND FUNCTIONS HERE ********************************************************************************
 
-main_dir = os.path.split(os.path.abspath(__file__))[0]
-data_dir = os.path.join(main_dir, "data")
-texture_dir = os.path.join(data_dir, "textures")
-sound_dir = os.path.join(data_dir, "sound")
-
-
-def load_image(name, colorkey=None, scale=1):
-    fullname = os.path.join(texture_dir, name)
-    image = pg.image.load(fullname)
-
-    image = image.convert_alpha()
-
-    size = image.get_size()
-    size = (size[0] * scale, size[1] * scale)
-    image = pg.transform.scale(image, size)
-
-    if colorkey is not None:
-        if colorkey == -1:
-            colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey, pg.RLEACCEL)
-    return image, image.get_rect()
-
-
-def load_sound(name):
-    class NoneSound:
-        def plat(self):
-            pass
-
-    if not pg.mixer or not pg.mixer.get_init():
-        return NoneSound()
-
-    fullname = os.path.join(sound_dir, name)
-    sound = pg.mixer.Sound(fullname)
-
-    return sound
+ADMIN = True
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 
 
 # GAME ObJECT CLASSES HERE *********************************************************************************
-class Pointer(pg.sprite.Sprite):
-    """the mouse pointer class"""
+class Menu():
 
     def __init__(self):
-        pg.sprite.Sprite.__init__(self)     # call sprite init
-        self.image, self.rect = load_image("pointer.png", -1, .1)
-        self.click = False
-        pg.event.set_grab(True)
+        self.menu_x = 800
+        self.menu_y = 1600
+        self.menu_background = pg.Surface((menu_x, menu_y))
+        self.menu_background.fill((0, 0, 0))
+        self.menu_background_rect = self.menu_background.get_rect(center = center_screen)
+        self.menu_options = ['NEW', 'SAVE', 'QUIT']
+        if ADMIN:
+            self.menu_options.append('EDIT')
+
+    def show(self):
+        print("Menu called...")
+        self.render_menu()
+        return(False)
+
+    def render_menu(self):
+        print("Entering render...")
+        screen.blit(self.menu_background, self.menu_background_rect)
+
+        menu_len = len(self.menu_options)
+        option_height = self.menu_x / menu_len
+        for item in self.menu_options:
+
+
+        pg.display.update()
+
+        time.sleep(2)
+
+
+class Pointer(pg.sprite.Sprite):
+
+    def __init__(self):
+        super(Pointer, self).__init__()
 
     def update(self):
-        """Move the mouse pointer"""
-        pos = pg.mouse.get_pos()
-        # reset pos tuple to keep mouse pointer in window
-        if pos[0] > 1599:
-            pos = (1599, pos[1])
-            #pg.mouse.set_pos(pos)
-        elif pos[0] < 1:
-            pos = (1, pos[1])
-            #pg.mouse.set_pos(pos)
-        if pos[1] > 899:
-            pos = (pos[0], 899)
-            #pg.mouse.set_pos(pos)
-        elif pos[1] < 1:
-            pos = (pos[0], 1)
-            #pg.mouse.set_pos(pos)
-        if pg.mouse.get_pos() != pos:
-            pg.mouse.set_pos(pos)
-        self.rect.topleft = pos
-        # print(pos, pg.mouse.get_pos())
-        if self.click:
-            # DO NOTHING RIGHT NOW FOR CLICK
-            print("mouse click")
-            None
-
-
+        if ADMIN is True:
+            mouse_pos = pg.mouse.get_pos()
+            mouse_pos = f"x:{mouse_pos[0]}, y:{mouse_pos[1]}"
+            self.font = pg.font.Font(None, 36)
+            self.textSurf = self.font.render(mouse_pos, True, WHITE, BLACK)
+            self.image = pygame.Surface((175, 35))
+            self.image.blit(self.textSurf, (5, 5))
+            screen.blit(self.image, (5, 5))
 
 # GAME LOOP HERE *******************************************************************************************
 
@@ -93,10 +71,10 @@ def GameLoop():
 
     running = True
 
-    # loading screen
-    fill_image = pg.image.load("data/textures/loading_screen.png")
-    background.blit(fill_image, (0, 0))
+    game_menu = Menu()
+    pointer = Pointer()
 
+    render_group = pg.sprite.Group(pointer)
 
     while running:
         clock.tick(60)
@@ -105,13 +83,10 @@ def GameLoop():
             if event.type == pg.QUIT:
                 running = False
             elif event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
-                running = False
+                running = game_menu.show()
 
-        allsprites.update()
-
-        screen.blit(background, (0, 0))
-        allsprites.draw(screen)
-        pg.display.flip()
+        render_group.update()
+        pg.display.update()
 
     pg.quit()
 
@@ -120,27 +95,22 @@ def GameLoop():
 if __name__ == '__main__':
 
     pg.init()
-
-    SCREEN_WIDTH = 1600
-    SCREEN_HEIGHT = 900
-
-    screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pg.display.set_caption("Tower Def")
-    pg.mouse.set_visible(False)
-    pg.mouse.set_cursor()
-
-    background = pg.Surface(screen.get_size())
-    background = background.convert()
-    background.fill((170, 170, 170))
-
-    screen.blit(background, (0, 0))
-    pygame.display.flip()
-
-    pointer = Pointer()
-
-    allsprites = pg.sprite.RenderPlain((pointer))
-
     clock = pg.time.Clock()
+
+    screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
+    screen.fill((150, 150, 150))
+    pg.display.set_caption("Tower Def")
+
+    # determine screen resolution
+    my_resolution = screen.get_size()
+    center_screen = screen.get_rect().center
+    print("Native resolution: ", my_resolution)
+
+    # loading screen
+    fill_image = pg.image.load(os.path.join(os.path.dirname(__file__), 'data/textures', 'loading_screen.png')).convert()
+    fill_image_rect = fill_image.get_rect(center = center_screen)
+    screen.blit(fill_image, fill_image_rect)
+    pg.display.flip()
 
     GameLoop()
 
